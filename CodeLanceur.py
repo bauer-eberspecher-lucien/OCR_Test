@@ -1,7 +1,8 @@
 """
+###LIGNE 246 POUR LANGUE ET LIGNE 207 POUR CHEMIN D'ACCES A L'IMAGE###
 Script de test pour le système OCR Enhanced
 Test spécifique pour le fichier lorem ipsum
-Version mise à jour pour CodeSourceOCR_EN_FR.py
+Version mise à jour pour CodeSourceOCR_EN_FR.py - CORRIGÉE
 """
 
 import sys
@@ -91,22 +92,23 @@ if fix_poppler_path():
 else:
     print("⚠️ Configuration Poppler échouée")
 
-# Import du nouveau système OCR Enhanced
+# Import du nouveau système OCR Enhanced - CORRIGÉ
 try:
     # Import depuis le nouveau fichier CodeSourceOCR_EN_FR.py
     from CodeSourceOCR_EN_FR import (
-        ImprovedOCRPipeline, 
-        OCRConfig, 
-        create_optimized_config_for_lorem_ipsum,
-        AdvancedImagePreprocessor,
-        RobustOCREngine
-    )
+    EnhancedOCRPipeline,  # ← CORRIGÉ: Nouveau nom
+    OCRConfig, 
+    create_optimized_config_for_lorem_ipsum,
+    create_universal_config,  # ← AJOUT: Nouvelle fonction
+    AdvancedImagePreprocessor,
+    EnhancedOCREngine  # ← CORRIGÉ: Nouveau nom
+)
     print("✅ Import du système OCR Enhanced réussi")
 except ImportError as e:
     print(f"❌ Erreur d'import: {e}")
     print("Vérifiez que le fichier CodeSourceOCR_EN_FR.py est dans le même dossier")
     print("Et que toutes les dépendances sont installées:")
-    print("pip install opencv-python pytesseract Pillow numpy matplotlib pdf2image python-Levenshtein tqdm easyocr paddlepaddle paddleocr")
+    print("pip install opencv-python pytesseract Pillow numpy matplotlib pdf2image python-Levenshtein tqdm easyocr")
     sys.exit(1)
 
 def test_installation():
@@ -145,9 +147,11 @@ def test_installation():
     
     try:
         import paddleocr
+        # Test d'import complet pour éviter l'erreur paddlex
+        from paddleocr import PaddleOCR
         print("✅ PaddleOCR disponible")
-    except ImportError:
-        print("⚠️ PaddleOCR manquant (recommandé mais optionnel)")
+    except (ImportError, ModuleNotFoundError) as e:
+        print(f"⚠️ PaddleOCR manquant ou incomplet ({e}) - optionnel")
     
     return components_ok
 
@@ -173,7 +177,7 @@ def test_ocr_simple():
         config = create_optimized_config_for_lorem_ipsum()
         config.save_debug_images = False  # Pas de debug pour le test simple
         
-        pipeline = ImprovedOCRPipeline(config)
+        pipeline = EnhancedOCRPipeline(config)  # ← CORRIGÉ: Nouveau nom
         
         results = pipeline._process_image_array(test_img, "test_simple")
         
@@ -200,7 +204,7 @@ def process_lorem_ipsum_file():
     """Traitement principal du fichier lorem ipsum"""
     # Chemins possibles pour votre fichier
     possible_files = [
-        r"C:\Users\bauer\Downloads\lorem-ipsum-meaning-in-english-lipsumhub (1).jpg",
+        r"C:\Users\bauer\Downloads\thaitest.jpeg",
         r"C:\Users\bauer\Downloads\lorem-ipsum-meaning-in-english-lipsumhub.jpg",
         r"C:\Users\bauer\Downloads\imtest.pdf",
         r"lorem_ipsum.jpg",
@@ -228,9 +232,44 @@ def process_lorem_ipsum_file():
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     
     try:
-        # Configuration spécialement optimisée pour Lorem Ipsum
-        config = create_optimized_config_for_lorem_ipsum()
-        config.output_dir = output_dir
+        # Configuration universelle adaptative
+        config = OCRConfig(
+            # Prétraitement adapté au thaï
+            enable_preprocessing=True,
+            enable_deskewing=True,
+            enable_denoising=True,
+            enable_sharpening=False,  # Peut dégrader les caractères thaï
+            enable_contrast_enhancement=True,
+            enable_adaptive_threshold=True,
+            scale_factor=3.0,  # Réduit un peu
+            
+            # Configuration OCR pour thaï uniquement
+            language='tha',
+            tesseract_config='--psm 3 -c preserve_interword_spaces=1',  # Préserve les espaces
+            confidence_threshold=1.0,  # Très très bas
+            enable_auto_language_detection=False,
+            
+            # EasyOCR prioritaire pour le thaï
+            enable_fallback=True,
+            fallback_engines=['easyocr'],
+            max_retry_attempts=1,
+            
+            # Post-traitement totalement désactivé
+            enable_text_cleaning=False,
+            enable_spell_correction=False,
+            enable_entity_extraction=False,
+            enable_structure_analysis=False,
+            
+            # Performance
+            enable_caching=False,
+            enable_parallel_processing=False,
+            
+            # Sortie avec debug
+            save_json=True,
+            save_visualization=True,
+            save_debug_images=True,
+            output_dir=output_dir
+        )
         
         print("⚙️ Configuration optimisée Lorem Ipsum:")
         print(f"   - Langues: {config.language}")
@@ -241,7 +280,7 @@ def process_lorem_ipsum_file():
         print(f"   - Debug images: {'Activé' if config.save_debug_images else 'Désactivé'}")
         
         # Initialisation du pipeline
-        pipeline = ImprovedOCRPipeline(config)
+        pipeline = EnhancedOCRPipeline(config)  # ← CORRIGÉ: Nouveau nom
         
         print("\n🚀 Début du traitement...")
         
@@ -408,24 +447,9 @@ def diagnostic_avance():
     except Exception as e:
         print(f"❌ Erreur diagnostic: {e}")
     
-    # Test de la qualité d'image
-    try:
-        from CodeSourceOCR_EN_FR import ImageQualityAssessment
-        import numpy as np
-        
-        # Image de test pour évaluation
-        test_img = np.ones((300, 400, 3), dtype=np.uint8) * 128
-        quality = ImageQualityAssessment.assess_image_quality(test_img)
-        
-        print(f"\n📊 TEST QUALITÉ D'IMAGE:")
-        print(f"   Netteté: {quality['sharpness']:.2f}")
-        print(f"   Contraste: {quality['contrast']:.2f}")
-        print(f"   Niveau de bruit: {quality['noise_level']:.2f}")
-        print(f"   Qualité globale: {quality['overall_quality']:.2f}")
-        print(f"   Recommandation: {quality['recommended_action']}")
-        
-    except Exception as e:
-        print(f"❌ Erreur test qualité: {e}")
+    # SUPPRIMÉ: Test de qualité d'image car ImageQualityAssessment n'existe plus
+    print(f"\n📊 TEST QUALITÉ D'IMAGE:")
+    print("   Module de test de qualité non disponible dans cette version")
 
 def main():
     """Fonction principale"""
@@ -439,7 +463,7 @@ def main():
         print("\nCommandes d'installation:")
         print("pip install opencv-python pytesseract Pillow numpy matplotlib")
         print("pip install pdf2image python-Levenshtein tqdm")
-        print("pip install easyocr paddlepaddle paddleocr")
+        print("pip install easyocr")
         return 1
     
     # Test OCR simple
